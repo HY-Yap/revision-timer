@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Revision Timer</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: {
+                                50: "#f0f5ff",
+                                100: "#e0ebff",
+                                200: "#c7d9ff",
+                                300: "#9fb8ff",
+                                400: "#748fff",
+                                500: "#4f62ff",
+                                600: "#3a3ef7",
+                                700: "#2c2de0",
+                                800: "#2628b4",
+                                900: "#25288e",
+                                950: "#18185a",
+                            },
+                            danger: {
+                                50: "#fff1f1",
+                                100: "#ffe1e1",
+                                200: "#ffc7c7",
+                                300: "#ff9e9e",
+                                400: "#ff6b6b",
+                                500: "#ff3838",
+                                600: "#ff1f1f",
+                                700: "#e50000",
+                                800: "#c50303",
+                                900: "#9f0a0a",
+                                950: "#560000",
+                            },
+                        },
+                        animation: {
+                            "pulse-overtime":
+                                "pulse-overtime 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                            "gradient-shift":
+                                "gradient-shift 10s ease infinite",
+                        },
+                        keyframes: {
+                            "pulse-overtime": {
+                                "0%, 100%": {
+                                    opacity: 1,
+                                    transform: "scale(1)",
+                                },
+                                "50%": {
+                                    opacity: 0.8,
+                                    transform: "scale(1.05)",
+                                },
+                            },
+                            "gradient-shift": {
+                                "0%, 100%": {
+                                    "background-position": "0% 50%",
+                                },
+                                "50%": {
+                                    "background-position": "100% 50%",
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            .text-gradient {
+                background-image: linear-gradient(
+                    to right,
+                    var(--tw-gradient-stops)
+                );
+                --tw-gradient-from: #4f62ff;
+                --tw-gradient-to: #2c2de0;
+                --tw-gradient-stops: var(--tw-gradient-from),
+                    var(--tw-gradient-to);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+            }
+
+            .timer-container {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: min(60vh, 400px);
+            }
+
+            .overtime {
+                color: #ff3838;
+                animation: pulse-overtime 1.5s cubic-bezier(0.4, 0, 0.6, 1)
+                    infinite;
+            }
+
+            .progress-bar {
+                height: 1rem;
+                background-color: #4f62ff;
+                border-radius: 9999px;
+                transition-property: all;
+                transition-duration: 1000ms;
+                transition-timing-function: linear;
+            }
+
+            .progress-bar-overtime {
+                background-color: #ff3838;
+            }
+
+            .timer-display {
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+                    Consolas, "Liberation Mono", "Courier New", monospace;
+                font-weight: 800;
+                letter-spacing: -0.05em;
+                line-height: 1;
+                text-align: center;
+                text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .animate-bg {
+                background-image: linear-gradient(
+                    to bottom right,
+                    #f9fafb,
+                    #eff6ff,
+                    #f9fafb
+                );
+                background-size: 200% 200%;
+                animation: gradient-shift 10s ease infinite;
+            }
+
+            .dark .animate-bg-dark {
+                background-image: linear-gradient(
+                    to bottom right,
+                    #111827,
+                    #1f2937,
+                    #111827
+                );
+                background-size: 200% 200%;
+                animation: gradient-shift 10s ease infinite;
+            }
+
+            .keyboard-shortcut {
+                background-color: #e5e7eb;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+                    Consolas, "Liberation Mono", "Courier New", monospace;
+            }
+
+            .dark .keyboard-shortcut {
+                background-color: #374151;
+            }
+
+            .modal {
+                position: fixed;
+                inset: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 50;
+                backdrop-filter: blur(4px);
+            }
+
+            @keyframes pulse-overtime {
+                0%,
+                100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.8;
+                    transform: scale(1.05);
+                }
+            }
+
+            @keyframes gradient-shift {
+                0%,
+                100% {
+                    background-position: 0% 50%;
+                }
+                50% {
+                    background-position: 100% 50%;
+                }
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            /* Dark mode specific fixes */
+            .dark {
+                color-scheme: dark;
+            }
+
+            html.dark body {
+                background-color: #111827;
+                color: #f9fafb;
+            }
+
+            html.dark .animate-bg-dark {
+                background-image: linear-gradient(
+                    to bottom right,
+                    #111827,
+                    #1f2937,
+                    #111827
+                );
+                background-size: 200% 200%;
+                animation: gradient-shift 10s ease infinite;
+            }
+        </style>
+    </head>
+    <body
+        class="animate-bg text-gray-800 h-screen transition-colors duration-300 overflow-hidden"
+    >
+        <!-- Theme Toggle Button -->
+        <button
+            id="themeToggle"
+            class="fixed top-4 right-4 p-3 rounded-full bg-white/20 backdrop-blur-md dark:bg-black/20 shadow-lg hover:shadow-xl transition-all duration-300 z-40"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-gray-700 dark:text-gray-200"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+            </svg>
+        </button>
+
+        <!-- Setup Section -->
+        <div
+            id="setupSection"
+            class="h-screen flex items-center justify-center"
+        >
+            <div
+                class="max-w-md w-full p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl"
+            >
+                <h1 class="text-4xl font-bold text-center mb-8 text-gradient">
+                    Revision Timer
+                </h1>
+
+                <div class="space-y-6">
+                    <div>
+                        <label
+                            for="questionCount"
+                            class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2"
+                            >Number of Questions</label
+                        >
+                        <input
+                            type="number"
+                            id="questionCount"
+                            min="1"
+                            value="10"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            for="timePerQuestion"
+                            class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2"
+                            >Time per Question (seconds)</label
+                        >
+                        <input
+                            type="number"
+                            id="timePerQuestion"
+                            min="1"
+                            value="90"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200"
+                        />
+                    </div>
+
+                    <button
+                        id="startButton"
+                        class="w-full mt-6 py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-lg flex items-center justify-center"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 mr-2"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                            />
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        Start Timer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer Section -->
+        <div id="timerSection" class="hidden h-screen flex flex-col">
+            <div class="h-full flex flex-col justify-between py-4 px-4">
+                <div>
+                    <!-- Question Progress Indicator -->
+                    <div class="flex justify-center mb-2">
+                        <div
+                            id="questionIndicators"
+                            class="flex gap-2 overflow-x-auto py-2 max-w-full"
+                        >
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Question Info -->
+                    <div class="text-center mb-2">
+                        <h1 class="text-3xl md:text-4xl font-bold">
+                            Question
+                            <span
+                                id="currentQuestion"
+                                class="text-primary-500 dark:text-primary-400"
+                                >1</span
+                            >/<span
+                                id="totalQuestions"
+                                class="text-gray-600 dark:text-gray-400"
+                                >10</span
+                            >
+                        </h1>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full max-w-4xl mx-auto mb-4">
+                        <div
+                            class="bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden"
+                        >
+                            <div
+                                id="progressBar"
+                                class="progress-bar w-full"
+                            ></div>
+                        </div>
+                        <div
+                            class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-1"
+                        >
+                            <span>Time Remaining</span>
+                            <span id="timeElapsed">0:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer Display - The main focus, extra large -->
+                <div class="timer-container">
+                    <div
+                        id="timeDisplay"
+                        class="timer-display text-[8rem] xs:text-[10rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem]"
+                    >
+                        1:30
+                    </div>
+                </div>
+
+                <div>
+                    <!-- Buttons -->
+                    <div class="w-full max-w-2xl mx-auto flex gap-4 mb-4">
+                        <button
+                            id="quitButton"
+                            class="flex-none py-4 px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-2 border-gray-300 dark:border-gray-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-lg flex items-center justify-center"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                            <span class="sr-only md:not-sr-only md:ml-2"
+                                >Quit</span
+                            >
+                        </button>
+                        <button
+                            id="pauseButton"
+                            class="flex-1 py-4 px-6 bg-white dark:bg-gray-800 text-primary-500 dark:text-primary-400 border-2 border-primary-500 dark:border-primary-400 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-lg flex items-center justify-center"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 mr-2"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                            Pause
+                        </button>
+                        <button
+                            id="nextButton"
+                            class="flex-1 py-4 px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-lg flex items-center justify-center"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 mr-2"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                                />
+                            </svg>
+                            Next Question
+                        </button>
+                    </div>
+
+                    <!-- Keyboard Shortcuts -->
+                    <div
+                        class="text-center text-gray-600 dark:text-gray-400 text-sm md:text-base py-3"
+                    >
+                        Press
+                        <span class="keyboard-shortcut">Space</span>
+                        for next question •
+                        <span class="keyboard-shortcut">P</span>
+                        to pause/resume •
+                        <span class="keyboard-shortcut">Q</span>
+                        to quit
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div
+            id="summarySection"
+            class="hidden h-screen flex items-center justify-center overflow-hidden"
+        >
+            <div
+                class="w-full max-w-3xl mx-auto px-4 py-4 h-full flex items-center"
+            >
+                <div
+                    class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl p-6 md:p-8 w-full flex flex-col max-h-[90vh]"
+                >
+                    <h1
+                        class="text-3xl md:text-4xl font-bold text-center mb-4 md:mb-8 text-gradient"
+                    >
+                        Summary
+                    </h1>
+
+                    <div
+                        class="space-y-4 md:space-y-6 flex-1 flex flex-col overflow-hidden"
+                    >
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
+                        >
+                            <div
+                                class="bg-gray-100 dark:bg-gray-700 p-4 md:p-6 rounded-xl"
+                            >
+                                <div
+                                    class="text-base md:text-lg text-gray-600 dark:text-gray-400"
+                                >
+                                    Total Time
+                                </div>
+                                <div
+                                    id="totalTime"
+                                    class="text-2xl md:text-3xl font-bold"
+                                >
+                                    0:00
+                                </div>
+                            </div>
+                            <div
+                                class="bg-gray-100 dark:bg-gray-700 p-4 md:p-6 rounded-xl"
+                            >
+                                <div
+                                    class="text-base md:text-lg text-gray-600 dark:text-gray-400"
+                                >
+                                    Average Time
+                                </div>
+                                <div
+                                    id="averageTime"
+                                    class="text-2xl md:text-3xl font-bold"
+                                >
+                                    0:00
+                                </div>
+                            </div>
+                            <div
+                                class="bg-gray-100 dark:bg-gray-700 p-4 md:p-6 rounded-xl"
+                            >
+                                <div
+                                    class="text-base md:text-lg text-gray-600 dark:text-gray-400"
+                                >
+                                    Overtime Questions
+                                </div>
+                                <div
+                                    id="overtimeCount"
+                                    class="text-2xl md:text-3xl font-bold"
+                                >
+                                    0
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex-1 flex flex-col min-h-0 overflow-hidden"
+                        >
+                            <h2
+                                class="text-xl font-semibold mb-2 md:mb-4 text-gray-700 dark:text-gray-300"
+                            >
+                                Question Breakdown
+                            </h2>
+                            <div
+                                id="questionList"
+                                class="space-y-2 overflow-y-auto pr-2 flex-1 max-h-[30vh] md:max-h-[40vh] pb-2"
+                            >
+                                <!-- Question list will be generated here -->
+                            </div>
+                        </div>
+
+                        <button
+                            id="restartButton"
+                            class="w-full mt-4 py-3 md:py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-lg flex items-center justify-center"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 mr-2"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                            Start New Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quit Confirmation Modal -->
+        <div id="quitModal" class="modal hidden">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+            >
+                <h3 class="text-xl font-bold mb-4">Quit Paper?</h3>
+                <p class="mb-6 text-gray-600 dark:text-gray-300">
+                    Are you sure you want to quit? Your progress will not be
+                    saved.
+                </p>
+                <div class="flex gap-4">
+                    <button
+                        id="quitCancelButton"
+                        class="flex-1 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors duration-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        id="quitConfirmButton"
+                        class="flex-1 py-3 bg-danger-500 hover:bg-danger-600 text-white rounded-lg transition-colors duration-200"
+                    >
+                        Quit Paper
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // DOM Elements
+            const setupSection = document.getElementById("setupSection");
+            const timerSection = document.getElementById("timerSection");
+            const summarySection = document.getElementById("summarySection");
+            const startButton = document.getElementById("startButton");
+            const pauseButton = document.getElementById("pauseButton");
+            const nextButton = document.getElementById("nextButton");
+            const quitButton = document.getElementById("quitButton");
+            const restartButton = document.getElementById("restartButton");
+            const timeDisplay = document.getElementById("timeDisplay");
+            const progressBar = document.getElementById("progressBar");
+            const currentQuestionEl =
+                document.getElementById("currentQuestion");
+            const totalQuestionsEl = document.getElementById("totalQuestions");
+            const timeElapsedEl = document.getElementById("timeElapsed");
+            const totalTimeEl = document.getElementById("totalTime");
+            const averageTimeEl = document.getElementById("averageTime");
+            const overtimeCountEl = document.getElementById("overtimeCount");
+            const questionListEl = document.getElementById("questionList");
+            const themeToggle = document.getElementById("themeToggle");
+            const questionIndicators =
+                document.getElementById("questionIndicators");
+            const quitModal = document.getElementById("quitModal");
+            const quitCancelButton =
+                document.getElementById("quitCancelButton");
+            const quitConfirmButton =
+                document.getElementById("quitConfirmButton");
+
+            // Timer State
+            let timer;
+            let timerState = {
+                questionCount: 10,
+                timePerQuestion: 90, // seconds
+                currentQuestion: 1,
+                timeRemaining: 90,
+                originalTime: 90,
+                isPaused: false,
+                isOvertime: false,
+                questionTimes: [],
+                startTime: 0,
+            };
+
+            // Initialize theme from localStorage
+            function initTheme() {
+                const savedTheme = localStorage.getItem("theme") || "light";
+                if (savedTheme === "dark") {
+                    document.documentElement.classList.add("dark");
+                    document.body.classList.remove("animate-bg");
+                    document.body.classList.add("animate-bg-dark");
+
+                    themeToggle.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        `;
+                }
+            }
+
+            // Toggle theme between light and dark
+            function toggleTheme() {
+                const isDark =
+                    document.documentElement.classList.toggle("dark");
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+
+                // Force body class update for background
+                if (isDark) {
+                    document.body.classList.remove("animate-bg");
+                    document.body.classList.add("animate-bg-dark");
+                } else {
+                    document.body.classList.add("animate-bg");
+                    document.body.classList.remove("animate-bg-dark");
+                }
+
+                // Update icon
+                themeToggle.innerHTML = isDark
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>`;
+            }
+
+            // Format time from seconds to MM:SS
+            function formatTime(seconds) {
+                const mins = Math.floor(Math.abs(seconds) / 60);
+                const secs = Math.abs(seconds) % 60;
+                const prefix = seconds < 0 ? "+" : ""; // Add plus sign for overtime
+                return `${prefix}${mins}:${secs.toString().padStart(2, "0")}`;
+            }
+
+            // Create question indicators
+            function createQuestionIndicators() {
+                questionIndicators.innerHTML = "";
+                for (let i = 1; i <= timerState.questionCount; i++) {
+                    const indicator = document.createElement("div");
+                    indicator.className =
+                        i === timerState.currentQuestion
+                            ? "w-3 h-3 rounded-full bg-primary-500"
+                            : "w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600";
+                    indicator.setAttribute("data-question", i);
+                    questionIndicators.appendChild(indicator);
+                }
+            }
+
+            // Update question indicators
+            function updateQuestionIndicators() {
+                const indicators = questionIndicators.querySelectorAll("div");
+                indicators.forEach((indicator) => {
+                    const questionNum = parseInt(
+                        indicator.getAttribute("data-question")
+                    );
+                    if (questionNum === timerState.currentQuestion) {
+                        indicator.className =
+                            "w-3 h-3 rounded-full bg-primary-500";
+                    } else if (questionNum < timerState.currentQuestion) {
+                        indicator.className =
+                            "w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-500";
+                    } else {
+                        indicator.className =
+                            "w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600";
+                    }
+                });
+            }
+
+            // Update Next Button Text based on question number
+            function updateNextButtonText() {
+                if (timerState.currentQuestion === timerState.questionCount) {
+                    nextButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Finish Paper
+                    `;
+                } else {
+                    nextButton.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                        Next Question
+                    `;
+                }
+            }
+
+            // Update timer display
+            function updateTimerDisplay() {
+                // Update the time display
+                timeDisplay.textContent = formatTime(timerState.timeRemaining);
+
+                // Update progress bar
+                const progressPercentage =
+                    (timerState.timeRemaining / timerState.originalTime) * 100;
+                progressBar.style.width = `${Math.min(
+                    100,
+                    progressPercentage
+                )}%`;
+
+                // Handle overtime styling
+                if (timerState.timeRemaining <= 0 && !timerState.isOvertime) {
+                    timerState.isOvertime = true;
+                    timeDisplay.classList.add("overtime");
+                    progressBar.classList.add("progress-bar-overtime");
+                }
+
+                // Update time elapsed (showing positive value even in overtime)
+                const elapsed =
+                    timerState.originalTime - timerState.timeRemaining;
+                timeElapsedEl.textContent = formatTime(elapsed);
+
+                // Update question counter
+                currentQuestionEl.textContent = timerState.currentQuestion;
+                totalQuestionsEl.textContent = timerState.questionCount;
+
+                // Update question indicators
+                updateQuestionIndicators();
+
+                // Update next button text
+                updateNextButtonText();
+            }
+
+            // Start timer countdown
+            function startTimer() {
+                if (timerState.isPaused) return;
+
+                timer = setInterval(() => {
+                    timerState.timeRemaining--;
+                    updateTimerDisplay();
+                }, 1000);
+            }
+
+            // Pause the timer
+            function pauseTimer() {
+                clearInterval(timer);
+                timerState.isPaused = true;
+                pauseButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Resume
+            `;
+            }
+
+            // Resume the timer
+            function resumeTimer() {
+                timerState.isPaused = false;
+                pauseButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Pause
+            `;
+                startTimer();
+            }
+
+            // Move to the next question
+            function nextQuestion() {
+                // Record time taken for current question
+                const timeTaken =
+                    timerState.originalTime - timerState.timeRemaining;
+                timerState.questionTimes.push({
+                    question: timerState.currentQuestion,
+                    time: timeTaken,
+                    isOvertime: timerState.isOvertime,
+                });
+
+                // Check if we've completed all questions
+                if (timerState.currentQuestion >= timerState.questionCount) {
+                    showSummary();
+                    return;
+                }
+
+                // Reset for next question
+                clearInterval(timer);
+                timerState.currentQuestion++;
+                timerState.timeRemaining = timerState.originalTime;
+                timerState.isOvertime = false;
+
+                // Reset styling
+                timeDisplay.classList.remove("overtime");
+                progressBar.classList.remove("progress-bar-overtime");
+
+                // Update display and restart timer
+                updateTimerDisplay();
+
+                // Always start the timer immediately, regardless of pause state
+                // Only keep paused state if it was paused before
+                const wasPaused = timerState.isPaused;
+                timerState.isPaused = false;
+                startTimer();
+
+                // If it was paused before, update the pause state and button but keep timer running
+                if (wasPaused) {
+                    timerState.isPaused = true;
+                    pauseButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Resume
+        `;
+                }
+            }
+
+            // Show quit confirmation modal
+            function showQuitModal() {
+                pauseTimer(); // Pause the timer while confirming
+                quitModal.classList.remove("hidden");
+            }
+
+            // Hide quit confirmation modal
+            function hideQuitModal() {
+                quitModal.classList.add("hidden");
+                if (!timerState.isPaused) {
+                    resumeTimer(); // Only resume if it wasn't paused before
+                }
+            }
+
+            // Confirm quit and return to setup screen
+            function confirmQuit() {
+                clearInterval(timer);
+                quitModal.classList.add("hidden");
+                timerSection.classList.add("hidden");
+                setupSection.classList.remove("hidden");
+            }
+
+            // Show summary after all questions
+            function showSummary() {
+                clearInterval(timer);
+                timerSection.classList.add("hidden");
+                summarySection.classList.remove("hidden");
+
+                // Calculate stats
+                const totalSeconds = timerState.questionTimes.reduce(
+                    (sum, q) => sum + q.time,
+                    0
+                );
+                const averageSeconds = Math.round(
+                    totalSeconds / timerState.questionCount
+                );
+                const overtimeCount = timerState.questionTimes.filter(
+                    (q) => q.isOvertime
+                ).length;
+
+                // Update summary display
+                totalTimeEl.textContent = formatTime(totalSeconds);
+                averageTimeEl.textContent = formatTime(averageSeconds);
+                overtimeCountEl.textContent = overtimeCount;
+
+                // Generate question list
+                questionListEl.innerHTML = "";
+                timerState.questionTimes.forEach((q) => {
+                    const questionItem = document.createElement("div");
+                    questionItem.className =
+                        "flex justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg";
+
+                    const questionNumber = document.createElement("span");
+                    questionNumber.textContent = `Question ${q.question}`;
+
+                    const questionTime = document.createElement("span");
+                    questionTime.textContent = formatTime(q.time);
+                    if (q.isOvertime) {
+                        questionTime.className = "text-danger-500 font-medium";
+                    }
+
+                    questionItem.appendChild(questionNumber);
+                    questionItem.appendChild(questionTime);
+                    questionListEl.appendChild(questionItem);
+                });
+            }
+
+            // Start a new session
+            function startNewSession() {
+                // Get values from input
+                const questionCount =
+                    parseInt(document.getElementById("questionCount").value) ||
+                    10;
+                const timePerQuestion =
+                    parseInt(
+                        document.getElementById("timePerQuestion").value
+                    ) || 90;
+
+                // Initialize timer state
+                timerState = {
+                    questionCount,
+                    timePerQuestion,
+                    currentQuestion: 1,
+                    timeRemaining: timePerQuestion,
+                    originalTime: timePerQuestion,
+                    isPaused: false,
+                    isOvertime: false,
+                    questionTimes: [],
+                    startTime: Date.now(),
+                };
+
+                // Create question indicators
+                createQuestionIndicators();
+
+                // Update display
+                updateTimerDisplay();
+
+                // Show timer section
+                setupSection.classList.add("hidden");
+                summarySection.classList.add("hidden");
+                timerSection.classList.remove("hidden");
+
+                // Start the timer
+                startTimer();
+            }
+
+            // Event Listeners
+            startButton.addEventListener("click", startNewSession);
+
+            pauseButton.addEventListener("click", () => {
+                if (timerState.isPaused) {
+                    resumeTimer();
+                } else {
+                    pauseTimer();
+                }
+            });
+
+            nextButton.addEventListener("click", nextQuestion);
+
+            quitButton.addEventListener("click", showQuitModal);
+            quitCancelButton.addEventListener("click", hideQuitModal);
+            quitConfirmButton.addEventListener("click", confirmQuit);
+
+            restartButton.addEventListener("click", () => {
+                timerSection.classList.add("hidden");
+                summarySection.classList.add("hidden");
+                setupSection.classList.remove("hidden");
+            });
+
+            themeToggle.addEventListener("click", toggleTheme);
+
+            // Keyboard shortcuts
+            document.addEventListener("keydown", (e) => {
+                if (!timerSection.classList.contains("hidden")) {
+                    if (e.code === "Space") {
+                        e.preventDefault(); // Prevent page scrolling
+                        nextQuestion();
+                    } else if (e.key.toLowerCase() === "p") {
+                        if (timerState.isPaused) {
+                            resumeTimer();
+                        } else {
+                            pauseTimer();
+                        }
+                    } else if (e.key.toLowerCase() === "q") {
+                        showQuitModal();
+                    }
+                }
+
+                // Allow Escape key to close the quit modal
+                if (
+                    e.key === "Escape" &&
+                    !quitModal.classList.contains("hidden")
+                ) {
+                    hideQuitModal();
+                }
+            });
+
+            // Initialize theme on load
+            document.addEventListener("DOMContentLoaded", initTheme);
+        </script>
+    </body>
+</html>
