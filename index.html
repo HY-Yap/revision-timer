@@ -1040,12 +1040,6 @@
                 worksheetNameInput.focus();
             }
 
-            if (!worksheetNameInput.value.trim()) {
-                showToast("Enter a worksheet name");
-                worksheetNameInput.focus();
-                return;
-            }
-
             // Hide export modal
             function hideExportModal() {
                 exportModal.classList.add("hidden");
@@ -1053,6 +1047,12 @@
 
             // Generate and download text file with results
             function exportResults() {
+                if (!worksheetNameInput.value.trim()) {
+                    showToast("Enter a worksheet name");
+                    worksheetNameInput.focus();
+                    return;
+                }
+
                 const worksheetName =
                     worksheetNameInput.value.trim() || "Assignment Results";
                 const fileName = `${worksheetName}.txt`;
