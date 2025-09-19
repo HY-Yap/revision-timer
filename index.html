@@ -352,7 +352,7 @@
                         <div
                             class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-1"
                         >
-                            <span>Time Remaining</span>
+                            <span>Time Elapsed</span>
                             <span id="timeElapsed">0:00</span>
                         </div>
                     </div>
@@ -585,9 +585,16 @@
         </div>
 
         <!-- Quit Confirmation Modal -->
-        <div id="quitModal" class="modal hidden">
+        <div
+            id="quitModal"
+            class="modal hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden="true"
+        >
             <div
                 class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+                tabindex="-1"
             >
                 <h3 class="text-xl font-bold mb-4">Quit Paper?</h3>
                 <p class="mb-6 text-gray-600 dark:text-gray-300">
@@ -903,15 +910,57 @@
                 }, 2000);
             }
 
+            // All background roots that should be untabbable when a modal is open
+            const focus_roots = [
+                setupSection,
+                timerSection,
+                summarySection,
+                themeToggle,
+            ];
+
+            function setModalState(modalEl, isOpen) {
+                // Hide/show from AT and set inert to block focus/tabbing
+                focus_roots.forEach((el) => {
+                    if (!el) return;
+                    if (isOpen) {
+                        el.setAttribute("inert", "");
+                        el.setAttribute("aria-hidden", "true");
+                    } else {
+                        el.removeAttribute("inert");
+                        el.removeAttribute("aria-hidden");
+                    }
+                });
+
+                // modal visibility + aria
+                modalEl.classList.toggle("hidden", !isOpen);
+                modalEl.setAttribute("aria-hidden", isOpen ? "false" : "true");
+
+                if (isOpen) {
+                    // Focus the first focusable in the modal
+                    const content = modalEl.querySelector(
+                        '[tabindex], button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                    );
+                    (content || modalEl).focus();
+                }
+            }
+
             // Prevent modal focus leak (pressing tab)
             function trapFocus(modal) {
-                const f = modal.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-                );
-                const first = f[0],
-                    last = f[f.length - 1];
+                // Prevent multiple listeners if called more than once
+                if (modal._trapBound) return;
+                modal._trapBound = true;
+
                 modal.addEventListener("keydown", (e) => {
                     if (e.key !== "Tab") return;
+
+                    const focusables = modal.querySelectorAll(
+                        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                    );
+                    if (!focusables.length) return;
+
+                    const first = focusables[0];
+                    const last = focusables[focusables.length - 1];
+
                     if (e.shiftKey && document.activeElement === first) {
                         e.preventDefault();
                         last.focus();
@@ -921,7 +970,6 @@
                     }
                 });
             }
-
             // Move to the next question
             function nextQuestion() {
                 // Record time taken for current question
