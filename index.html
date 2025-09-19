@@ -1040,6 +1040,12 @@
                 worksheetNameInput.focus();
             }
 
+            if (!worksheetNameInput.value.trim()) {
+                showToast("Enter a worksheet name");
+                worksheetNameInput.focus();
+                return;
+            }
+
             // Hide export modal
             function hideExportModal() {
                 exportModal.classList.add("hidden");
