@@ -1031,10 +1031,7 @@
 
             // Confirm quit and return to setup screen
             function confirmQuit() {
-                clearInterval(timer);
-                quitModal.classList.add("hidden");
-                timerSection.classList.add("hidden");
-                setupSection.classList.remove("hidden");
+                location.reload();
             }
 
             // Show summary after all questions
