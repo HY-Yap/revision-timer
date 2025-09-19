@@ -3,7 +3,35 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="dark light" />
         <title>Assignment Timer</title>
+        <!-- prevent dark-mode flash -->
+        <script>
+            (function () {
+                try {
+                    var ls = localStorage.getItem("theme");
+                    var prefersDark =
+                        window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches;
+                    var dark = ls === "dark" || (!ls && prefersDark);
+
+                    if (dark) {
+                        document.documentElement.classList.add("dark");
+                        // Set a matching background immediately to avoid white flash
+                        document.documentElement.style.backgroundColor =
+                            "#111827";
+                    } else {
+                        document.documentElement.classList.remove("dark");
+                        document.documentElement.style.backgroundColor =
+                            "#ffffff";
+                    }
+                } catch (e) {
+                    // If anything goes wrong, fall back to light to avoid a blank screen
+                    document.documentElement.style.backgroundColor = "#ffffff";
+                }
+            })();
+        </script>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
