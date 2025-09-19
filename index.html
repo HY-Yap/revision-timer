@@ -158,15 +158,21 @@
                 animation: gradient-shift 10s ease infinite;
             }
 
-            .dark .animate-bg-dark {
+            .dark .animate-bg {
                 background-image: linear-gradient(
                     to bottom right,
                     #111827,
                     #1f2937,
                     #111827
                 );
-                background-size: 200% 200%;
-                animation: gradient-shift 10s ease infinite;
+            }
+
+            /* base colors for safety (prevents any flash if JS toggles colors) */
+            body {
+                background-color: #f9fafb;
+            }
+            .dark body {
+                background-color: #111827;
             }
 
             .keyboard-shortcut {
@@ -226,17 +232,6 @@
             html.dark body {
                 background-color: #111827;
                 color: #f9fafb;
-            }
-
-            html.dark .animate-bg-dark {
-                background-image: linear-gradient(
-                    to bottom right,
-                    #111827,
-                    #1f2937,
-                    #111827
-                );
-                background-size: 200% 200%;
-                animation: gradient-shift 10s ease infinite;
             }
         </style>
     </head>
@@ -739,18 +734,11 @@
 
             // Initialize theme from localStorage
             function initTheme() {
-                const savedTheme = localStorage.getItem("theme") || "light";
-                if (savedTheme === "dark") {
-                    document.documentElement.classList.add("dark");
-                    document.body.classList.remove("animate-bg");
-                    document.body.classList.add("animate-bg-dark");
-
-                    themeToggle.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-        `;
-                }
+                const isDark =
+                    document.documentElement.classList.contains("dark");
+                themeToggle.innerHTML = isDark
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>`;
             }
 
             // Toggle theme between light and dark
@@ -758,15 +746,6 @@
                 const isDark =
                     document.documentElement.classList.toggle("dark");
                 localStorage.setItem("theme", isDark ? "dark" : "light");
-
-                // Force body class update for background
-                if (isDark) {
-                    document.body.classList.remove("animate-bg");
-                    document.body.classList.add("animate-bg-dark");
-                } else {
-                    document.body.classList.add("animate-bg");
-                    document.body.classList.remove("animate-bg-dark");
-                }
 
                 // Update icon
                 themeToggle.innerHTML = isDark
@@ -1000,7 +979,6 @@
             }
             // Move to the next question
             function nextQuestion() {
-                // Record time taken for current question
                 const timeTaken =
                     timerState.originalTime - timerState.timeRemaining;
                 timerState.questionTimes.push({
@@ -1009,52 +987,37 @@
                     isOvertime: timerState.isOvertime,
                 });
 
-                // Check if we've completed all questions
                 if (timerState.currentQuestion >= timerState.questionCount) {
                     showSummary();
                     return;
                 }
 
-                // Reset for next question
                 clearInterval(timer);
                 timerState.currentQuestion++;
                 timerState.timeRemaining = timerState.originalTime;
                 timerState.isOvertime = false;
 
-                // Reset styling
                 timeDisplay.classList.remove("overtime");
                 progressBar.classList.remove("progress-bar-overtime");
 
-                // Update display and restart timer
                 updateTimerDisplay();
-
-                // Always start the timer immediately, regardless of pause state
-                // Only keep paused state if it was paused before
-                const wasPaused = timerState.isPaused;
-                timerState.isPaused = false;
+                timerState.isPaused = false; // we only ever allow Next when not paused
+                pauseButton.innerHTML = `...Pause SVG... Pause`;
                 startTimer();
-
-                // If it was paused before, update the pause state and button but keep timer running
-                if (wasPaused) {
-                    timerState.isPaused = true;
-                    pauseButton.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Resume
-        `;
-                }
             }
 
-            // Show quit confirmation modal
+            // Quit modal
+            let was_running_before_quit = false;
+
             function showQuitModal() {
-                quitModal.classList.remove("hidden");
+                was_running_before_quit = !timerState.isPaused;
+                pauseTimer();
+                trapFocus(quitModal);
+                setModalState(quitModal, true);
             }
-
-            // Hide quit confirmation modal
             function hideQuitModal() {
-                quitModal.classList.add("hidden");
+                setModalState(quitModal, false);
+                if (was_running_before_quit) resumeTimer();
             }
 
             // Confirm quit and return to setup screen
