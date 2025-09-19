@@ -841,13 +841,20 @@
             }
 
             // Start timer countdown
+            let tick_anchor = null;
+
             function startTimer() {
                 if (timerState.isPaused) return;
-
+                clearInterval(timer);
+                tick_anchor = Date.now();
                 timer = setInterval(() => {
-                    timerState.timeRemaining--;
+                    const elapsed = Math.floor(
+                        (Date.now() - tick_anchor) / 1000
+                    );
+                    timerState.timeRemaining =
+                        timerState.originalTime - elapsed;
                     updateTimerDisplay();
-                }, 1000);
+                }, 250);
             }
 
             // Pause the timer
