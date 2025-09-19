@@ -947,16 +947,12 @@
 
             // Show quit confirmation modal
             function showQuitModal() {
-                pauseTimer(); // Pause the timer while confirming
                 quitModal.classList.remove("hidden");
             }
 
             // Hide quit confirmation modal
             function hideQuitModal() {
                 quitModal.classList.add("hidden");
-                if (!timerState.isPaused) {
-                    resumeTimer(); // Only resume if it wasn't paused before
-                }
             }
 
             // Confirm quit and return to setup screen
