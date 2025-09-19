@@ -643,6 +643,14 @@
             </div>
         </div>
 
+        <!-- Toast -->
+        <div
+            id="toast"
+            class="pointer-events-none fixed inset-x-0 top-4 mx-auto w-fit max-w-[90vw] rounded-xl bg-black/80 text-white text-sm md:text-base px-4 py-2 shadow-xl opacity-0 translate-y-[-8px] transition-all duration-300 z-[60]"
+        >
+            Resume the timer before going to the next question.
+        </div>
+
         <script>
             // DOM Elements
             const setupSection = document.getElementById("setupSection");
@@ -844,6 +852,8 @@
 
             // Pause the timer
             function pauseTimer() {
+                nextButton.disabled = true;
+                nextButton.classList.add("opacity-60", "cursor-not-allowed");
                 clearInterval(timer);
                 timerState.isPaused = true;
                 pauseButton.innerHTML = `
@@ -857,6 +867,8 @@
 
             // Resume the timer
             function resumeTimer() {
+                nextButton.disabled = false;
+                nextButton.classList.remove("opacity-60", "cursor-not-allowed");
                 timerState.isPaused = false;
                 pauseButton.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -865,6 +877,23 @@
                 Pause
             `;
                 startTimer();
+            }
+
+            // Toast
+            function showToast(
+                msg = "Resume the timer before going to the next question."
+            ) {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                // show
+                t.classList.remove("opacity-0");
+                t.classList.remove("translate-y-[-8px]");
+                // hide after 2s
+                clearTimeout(showToast._tid);
+                showToast._tid = setTimeout(() => {
+                    t.classList.add("opacity-0");
+                    t.classList.add("translate-y-[-8px]");
+                }, 2000);
             }
 
             // Move to the next question
@@ -1099,7 +1128,13 @@
                 }
             });
 
-            nextButton.addEventListener("click", nextQuestion);
+            nextButton.addEventListener("click", () => {
+                if (timerState.isPaused) {
+                    showToast();
+                    return;
+                }
+                nextQuestion();
+            });
 
             quitButton.addEventListener("click", showQuitModal);
             quitCancelButton.addEventListener("click", hideQuitModal);
@@ -1122,6 +1157,10 @@
                 if (!timerSection.classList.contains("hidden")) {
                     if (e.code === "Space") {
                         e.preventDefault(); // Prevent page scrolling
+                        if (timerState.isPaused) {
+                            showToast();
+                            return;
+                        }
                         nextQuestion();
                     } else if (e.key.toLowerCase() === "p") {
                         if (timerState.isPaused) {
