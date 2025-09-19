@@ -642,7 +642,13 @@
         </div>
 
         <!-- Export Name Modal -->
-        <div id="exportModal" class="modal hidden">
+        <div
+            id="exportModal"
+            class="modal hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden="true"
+        >
             <div
                 class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
             >
@@ -826,9 +832,9 @@
                 // Update progress bar
                 const progressPercentage =
                     (timerState.timeRemaining / timerState.originalTime) * 100;
-                progressBar.style.width = `${Math.min(
-                    100,
-                    progressPercentage
+                progressBar.style.width = `${Math.max(
+                    0,
+                    Math.min(100, progressPercentage)
                 )}%`;
 
                 // Handle overtime styling
@@ -856,17 +862,18 @@
 
             // Start timer countdown
             let tick_anchor = null;
+            let remaining_at_start = null;
 
             function startTimer() {
                 if (timerState.isPaused) return;
                 clearInterval(timer);
                 tick_anchor = Date.now();
+                remaining_at_start = timerState.timeRemaining; // <-- key line
                 timer = setInterval(() => {
                     const elapsed = Math.floor(
                         (Date.now() - tick_anchor) / 1000
                     );
-                    timerState.timeRemaining =
-                        timerState.originalTime - elapsed;
+                    timerState.timeRemaining = remaining_at_start - elapsed; // <-- count down from current remaining
                     updateTimerDisplay();
                 }, 250);
             }
@@ -877,13 +884,7 @@
                 nextButton.classList.add("opacity-60", "cursor-not-allowed");
                 clearInterval(timer);
                 timerState.isPaused = true;
-                pauseButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Resume
-            `;
+                setPauseUI(true);
             }
 
             // Resume the timer
@@ -891,12 +892,7 @@
                 nextButton.disabled = false;
                 nextButton.classList.remove("opacity-60", "cursor-not-allowed");
                 timerState.isPaused = false;
-                pauseButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Pause
-            `;
+                setPauseUI(false);
                 startTimer();
             }
 
@@ -1002,7 +998,7 @@
 
                 updateTimerDisplay();
                 timerState.isPaused = false; // we only ever allow Next when not paused
-                pauseButton.innerHTML = `...Pause SVG... Pause`;
+                setPauseUI(false);
                 startTimer();
             }
 
@@ -1067,13 +1063,14 @@
 
             // Show export modal
             function showExportModal() {
-                exportModal.classList.remove("hidden");
-                worksheetNameInput.focus();
+                trapFocus(exportModal);
+                setModalState(exportModal, true);
+                setTimeout(() => worksheetNameInput.focus(), 0);
             }
 
             // Hide export modal
             function hideExportModal() {
-                exportModal.classList.add("hidden");
+                setModalState(exportModal, false);
             }
 
             // Generate and download text file with results
@@ -1139,6 +1136,11 @@
 
             // Start a new session
             function startNewSession() {
+                // init
+                nextButton.disabled = false;
+                nextButton.classList.remove("opacity-60", "cursor-not-allowed");
+                setPauseUI(false);
+
                 // Get values from input
                 const questionCount =
                     parseInt(document.getElementById("questionCount").value) ||
@@ -1187,6 +1189,27 @@
                 }
             });
 
+            function renderPauseButton() {
+                pauseButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Pause
+                `;
+            }
+            function renderResumeButton() {
+                pauseButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Resume
+                `;
+            }
+            function setPauseUI(isPaused) {
+                isPaused ? renderResumeButton() : renderPauseButton();
+            }
+
             nextButton.addEventListener("click", () => {
                 if (timerState.isPaused) {
                     showToast();
@@ -1213,40 +1236,52 @@
 
             // Keyboard shortcuts
             document.addEventListener("keydown", (e) => {
+                // 1) Special-case: "Enter" confirms export while the Export modal is open,
+                // even if you're typing in the input.
+                if (
+                    !exportModal.classList.contains("hidden") &&
+                    e.key === "Enter"
+                ) {
+                    e.preventDefault(); // avoid any default submit/newline
+                    exportResults();
+                    return;
+                }
+
+                const anyModalOpen =
+                    !quitModal.classList.contains("hidden") ||
+                    !exportModal.classList.contains("hidden");
+                const typingInField =
+                    document.activeElement &&
+                    document.activeElement.matches(
+                        'input, textarea, [contenteditable="true"]'
+                    );
+
+                // 2) Always let Esc close modals:
+                if (e.key === "Escape") {
+                    if (!quitModal.classList.contains("hidden"))
+                        hideQuitModal();
+                    else if (!exportModal.classList.contains("hidden"))
+                        hideExportModal();
+                    return;
+                }
+
+                // 3) Block other shortcuts while any modal is open or when typing:
+                if (anyModalOpen || typingInField) return;
+
+                // 4) Timer shortcuts:
                 if (!timerSection.classList.contains("hidden")) {
                     if (e.code === "Space") {
-                        e.preventDefault(); // Prevent page scrolling
+                        e.preventDefault();
                         if (timerState.isPaused) {
                             showToast();
                             return;
                         }
                         nextQuestion();
                     } else if (e.key.toLowerCase() === "p") {
-                        if (timerState.isPaused) {
-                            resumeTimer();
-                        } else {
-                            pauseTimer();
-                        }
+                        timerState.isPaused ? resumeTimer() : pauseTimer();
                     } else if (e.key.toLowerCase() === "q") {
                         showQuitModal();
                     }
-                }
-
-                // Allow Escape key to close modals
-                if (e.key === "Escape") {
-                    if (!quitModal.classList.contains("hidden")) {
-                        hideQuitModal();
-                    } else if (!exportModal.classList.contains("hidden")) {
-                        hideExportModal();
-                    }
-                }
-
-                // Enter key in export modal to confirm
-                if (
-                    e.key === "Enter" &&
-                    !exportModal.classList.contains("hidden")
-                ) {
-                    exportResults();
                 }
             });
 
