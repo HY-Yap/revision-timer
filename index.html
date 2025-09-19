@@ -903,6 +903,25 @@
                 }, 2000);
             }
 
+            // Prevent modal focus leak (pressing tab)
+            function trapFocus(modal) {
+                const f = modal.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                const first = f[0],
+                    last = f[f.length - 1];
+                modal.addEventListener("keydown", (e) => {
+                    if (e.key !== "Tab") return;
+                    if (e.shiftKey && document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    } else if (!e.shiftKey && document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                });
+            }
+
             // Move to the next question
             function nextQuestion() {
                 // Record time taken for current question
